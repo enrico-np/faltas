@@ -3,13 +3,16 @@
  * Estratégia: cacheia os arquivos do app na instalação e serve do cache.
  * Como tudo é local (sem chamadas de rede), isto basta para abrir sem internet.
  */
-const CACHE = "faltas-v5";
+const CACHE = "faltas-v6";
 const ARQUIVOS = [
   "./",
   "./index.html",
   "./app.js",
   "./db.js",
   "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./icon-maskable-512.png",
 ];
 
 self.addEventListener("install", (e) => {
