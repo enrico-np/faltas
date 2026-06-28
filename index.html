@@ -67,8 +67,8 @@
     border: none;
     color: rgba(255,255,255,.6);
     font-family: inherit;
-    font-size: .8rem;
-    padding: 11px 2px;
+    font-size: .82rem;
+    padding: 11px 4px;
     cursor: pointer;
     border-bottom: 3px solid transparent;
     transition: color .15s, border-color .15s;
@@ -141,9 +141,19 @@
   td .pill {
     display: inline-block; min-width: 26px; text-align: center;
     background: var(--tinta); color: #fff; border-radius: 20px;
-    padding: 2px 9px; font-size: .85rem;
+    padding: 4px 11px; font-size: .85rem; font-family: inherit;
+    border: none; cursor: pointer; transition: background .15s, transform .1s;
   }
-  td .pill.zero { background: var(--linha); color: var(--apagado); }
+  td .pill:active { transform: scale(.93); }
+  td button.pill:not(.zero):hover { background: var(--tinta-2); }
+  td .pill.zero { background: var(--linha); color: var(--apagado); cursor: default; }
+  td .pill .seta { font-size: .65rem; margin-left: 5px; opacity: .8; display: inline-block; transition: transform .2s; }
+  tr.aberto td .pill .seta { transform: rotate(180deg); }
+
+  /* linha de detalhe que abre abaixo do aluno */
+  tr.detalhe > td { padding: 0; border-bottom: 1px solid var(--linha); }
+  tr.detalhe .caixa-datas { background: var(--papel-2); padding: 6px 14px 10px; }
+  tr.detalhe .datas-falta { margin: 0; }
 
   /* ---------- editor de alunos ---------- */
   textarea {
@@ -187,7 +197,6 @@
   <button role="tab" aria-selected="true"  data-alvo="p-turmas">Turmas</button>
   <button role="tab" aria-selected="false" data-alvo="p-faltas">Chamada</button>
   <button role="tab" aria-selected="false" data-alvo="p-dados">Relatório</button>
-  <button role="tab" aria-selected="false" data-alvo="p-aluno">Aluno</button>
 </nav>
 
 <main>
@@ -255,16 +264,6 @@
       <label class="campo"><span>Ano</span><select id="sel-ano"></select></label>
     </div>
     <div id="resultado-dados"></div>
-  </section>
-
-  <!-- ===================== FALTAS DO ALUNO ===================== -->
-  <section id="p-aluno" class="panel" role="tabpanel">
-    <h2>Faltas de um aluno</h2>
-    <div class="linha-2">
-      <label class="campo"><span>Turma</span><select id="sel-turma-aluno"></select></label>
-      <label class="campo"><span>Aluno</span><select id="sel-aluno"></select></label>
-    </div>
-    <div id="resultado-aluno"></div>
   </section>
 </main>
 
