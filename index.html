@@ -67,8 +67,8 @@
     border: none;
     color: rgba(255,255,255,.6);
     font-family: inherit;
-    font-size: .82rem;
-    padding: 11px 4px;
+    font-size: .8rem;
+    padding: 11px 2px;
     cursor: pointer;
     border-bottom: 3px solid transparent;
     transition: color .15s, border-color .15s;
@@ -187,6 +187,7 @@
   <button role="tab" aria-selected="true"  data-alvo="p-turmas">Turmas</button>
   <button role="tab" aria-selected="false" data-alvo="p-faltas">Chamada</button>
   <button role="tab" aria-selected="false" data-alvo="p-dados">Relatório</button>
+  <button role="tab" aria-selected="false" data-alvo="p-aluno">Aluno</button>
 </nav>
 
 <main>
@@ -254,6 +255,16 @@
       <label class="campo"><span>Ano</span><select id="sel-ano"></select></label>
     </div>
     <div id="resultado-dados"></div>
+  </section>
+
+  <!-- ===================== FALTAS DO ALUNO ===================== -->
+  <section id="p-aluno" class="panel" role="tabpanel">
+    <h2>Faltas de um aluno</h2>
+    <div class="linha-2">
+      <label class="campo"><span>Turma</span><select id="sel-turma-aluno"></select></label>
+      <label class="campo"><span>Aluno</span><select id="sel-aluno"></select></label>
+    </div>
+    <div id="resultado-aluno"></div>
   </section>
 </main>
 

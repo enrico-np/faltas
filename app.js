@@ -27,13 +27,14 @@ $$('nav.tabs button').forEach((btn) => {
     // recarrega o conteúdo da aba ao entrar
     if (btn.dataset.alvo === "p-faltas") renderChamada();
     if (btn.dataset.alvo === "p-dados") renderDados();
+    if (btn.dataset.alvo === "p-aluno") renderTurmaAluno();
   });
 });
 
 /* Preenche um <select> de turmas. Retorna o array de turmas. */
 async function preencherSelectsTurma() {
   const turmas = await DB.listarTurmas();
-  for (const sel of ["#sel-turma-edit", "#sel-turma-falta", "#sel-turma-view"]) {
+  for (const sel of ["#sel-turma-edit", "#sel-turma-falta", "#sel-turma-view", "#sel-turma-aluno"]) {
     const el = $(sel);
     const anterior = el.value;
     el.innerHTML = "";
@@ -207,6 +208,77 @@ async function renderDados() {
 ["#sel-turma-view", "#sel-semestre", "#sel-ano"].forEach((sel) =>
   $(sel).addEventListener("change", renderDados)
 );
+
+/* ===================== FALTAS DO ALUNO ===================== */
+
+// Preenche o select de alunos conforme a turma escolhida.
+async function renderTurmaAluno() {
+  const turmaId = Number($("#sel-turma-aluno").value);
+  const selAluno = $("#sel-aluno");
+  selAluno.innerHTML = "";
+  if (!turmaId) {
+    const o = document.createElement("option");
+    o.textContent = "— selecione a turma —"; o.value = "";
+    selAluno.appendChild(o);
+    $("#resultado-aluno").innerHTML = "";
+    return;
+  }
+  const alunos = await DB.listarAlunos(turmaId);
+  if (alunos.length === 0) {
+    const o = document.createElement("option");
+    o.textContent = "— turma sem alunos —"; o.value = "";
+    selAluno.appendChild(o);
+    $("#resultado-aluno").innerHTML =
+      '<p class="vazio">Esta turma não tem alunos. Cadastre na aba Turmas.</p>';
+    return;
+  }
+  for (const a of alunos) {
+    const o = document.createElement("option");
+    o.value = a.id; o.textContent = a.nome;
+    selAluno.appendChild(o);
+  }
+  await renderFaltasDoAluno();
+}
+
+// Lista as faltas do aluno selecionado, cada uma com botão de excluir.
+async function renderFaltasDoAluno() {
+  const alunoId = Number($("#sel-aluno").value);
+  const div = $("#resultado-aluno");
+  if (!alunoId) { div.innerHTML = ""; return; }
+
+  const datas = await DB.datasDeFalta(alunoId);
+  if (datas.length === 0) {
+    div.innerHTML = '<p class="vazio">Este aluno não tem faltas registradas.</p>';
+    return;
+  }
+  // datas vêm em ordem crescente; mostro da mais recente para a mais antiga
+  const ordenadas = [...datas].sort().reverse();
+  let html = `<p class="sub" style="margin:0 0 10px 0">${ordenadas.length} falta(s) registrada(s).</p>`;
+  html += '<ul class="datas-falta">';
+  for (const d of ordenadas) {
+    html += `<li>
+      <span>${formatarBR(d)}</span>
+      <button data-data="${d}" data-aluno="${alunoId}">Excluir</button>
+    </li>`;
+  }
+  html += "</ul>";
+  div.innerHTML = html;
+
+  // liga os botões de excluir
+  div.querySelectorAll(".datas-falta button").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const data = btn.dataset.data;
+      const aid = Number(btn.dataset.aluno);
+      if (!confirm(`Excluir a falta de ${formatarBR(data)}? Esta ação não pode ser desfeita.`)) return;
+      await DB.removerFalta(aid, data);
+      toast(`Falta de ${formatarBR(data)} excluída.`);
+      await renderFaltasDoAluno();
+    });
+  });
+}
+
+$("#sel-turma-aluno").addEventListener("change", renderTurmaAluno);
+$("#sel-aluno").addEventListener("change", renderFaltasDoAluno);
 
 /* ---------- utilidades ---------- */
 function escape(s) {
