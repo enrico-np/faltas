@@ -129,6 +129,46 @@ async function _removerFaltasDoAluno(alunoId) {
   });
 }
 
+/* Adiciona um aluno à turma. Ignora se nome vazio ou já existente na turma.
+ * Retorna o id do novo aluno, ou null se não inseriu. */
+async function adicionarAluno(turmaId, nome) {
+  nome = nome.trim();
+  if (!nome) return null;
+  const atuais = await listarAlunos(turmaId);
+  if (atuais.some((a) => a.nome.toLowerCase() === nome.toLowerCase())) return null;
+  return tx("alunos", "readwrite", (t) =>
+    promisificar(t.objectStore("alunos").add({ nome, turmaId }))
+  );
+}
+
+/* Renomeia um aluno PELO ID — preserva o registro e, portanto, suas faltas.
+ * Rejeita nome vazio ou duplicado na mesma turma. Retorna true se renomeou. */
+async function renomearAluno(alunoId, novoNome) {
+  novoNome = novoNome.trim();
+  if (!novoNome) return false;
+  return tx("alunos", "readwrite", async (t) => {
+    const store = t.objectStore("alunos");
+    const aluno = await promisificar(store.get(alunoId));
+    if (!aluno) return false;
+    if (aluno.nome === novoNome) return true; // nada mudou
+    // checa duplicata na mesma turma
+    const daTurma = await promisificar(store.index("turmaId").getAll(aluno.turmaId));
+    if (daTurma.some((a) => a.id !== alunoId &&
+        a.nome.toLowerCase() === novoNome.toLowerCase())) {
+      return false;
+    }
+    aluno.nome = novoNome;
+    await promisificar(store.put(aluno));
+    return true;
+  });
+}
+
+/* Remove um aluno e todas as suas faltas. */
+async function removerAluno(alunoId) {
+  await _removerFaltasDoAluno(alunoId);
+  return tx("alunos", "readwrite", (t) => t.objectStore("alunos").delete(alunoId));
+}
+
 /* ----------------------------- FALTAS ----------------------------- */
 
 /* Registra falta na `dataISO` (YYYY-MM-DD) para cada id em alunoIds.
@@ -222,6 +262,7 @@ async function importarTudo(dados) {
 window.DB = {
   listarTurmas, criarTurma,
   listarAlunos, substituirAlunosDaTurma,
+  adicionarAluno, renomearAluno, removerAluno,
   registrarFaltas, removerFalta, datasDeFalta,
   faltasPorAluno, anosComRegistro,
   exportarTudo, importarTudo,

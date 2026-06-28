@@ -3,7 +3,7 @@
  * Estratégia: cacheia os arquivos do app na instalação e serve do cache.
  * Como tudo é local (sem chamadas de rede), isto basta para abrir sem internet.
  */
-const CACHE = "faltas-v3";
+const CACHE = "faltas-v5";
 const ARQUIVOS = [
   "./",
   "./index.html",

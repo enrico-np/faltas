@@ -73,18 +73,94 @@ async function carregarEditorAlunos() {
   const bloco = $("#bloco-editor");
   if (!turmaId) { bloco.hidden = true; return; }
   bloco.hidden = false;
+
   const alunos = await DB.listarAlunos(turmaId);
-  $("#editor-alunos").value = alunos.map((a) => a.nome).join("\n");
+  const tabela = $("#tabela-alunos");
+  tabela.innerHTML = "";
+
+  if (alunos.length === 0) {
+    tabela.innerHTML = '<p class="vazio-tabela">Nenhum aluno ainda. Adicione abaixo.</p>';
+    return;
+  }
+
+  for (const aluno of alunos) {
+    const row = document.createElement("div");
+    row.className = "aluno-edit";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "nome-edit";
+    input.value = aluno.nome;
+    input.dataset.id = aluno.id;
+    input.dataset.original = aluno.nome;
+    // salva ao sair do campo ou apertar Enter
+    input.addEventListener("blur", () => salvarRenome(input));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    });
+
+    const btn = document.createElement("button");
+    btn.className = "btn-excluir-aluno";
+    btn.textContent = "×";
+    btn.title = "Excluir aluno";
+    btn.addEventListener("click", () => excluirAluno(aluno));
+
+    row.appendChild(input);
+    row.appendChild(btn);
+    tabela.appendChild(row);
+  }
+}
+
+// salva o novo nome de um aluno (renomear preserva as faltas)
+async function salvarRenome(input) {
+  const id = Number(input.dataset.id);
+  const novo = input.value.trim();
+  const original = input.dataset.original;
+  if (novo === original) return;            // nada mudou
+  if (!novo) {                              // vazio: reverte
+    input.value = original;
+    toast("O nome não pode ficar vazio.", true);
+    return;
+  }
+  const ok = await DB.renomearAluno(id, novo);
+  if (ok) {
+    input.dataset.original = novo;
+    toast("Nome atualizado.");
+  } else {
+    input.value = original;                 // duplicado: reverte
+    toast("Já existe um aluno com esse nome na turma.", true);
+  }
+}
+
+// exclui um aluno (com confirmação, pois apaga as faltas dele)
+async function excluirAluno(aluno) {
+  if (!confirm(`Excluir "${aluno.nome}"? As faltas registradas para este aluno também serão apagadas.`)) return;
+  await DB.removerAluno(aluno.id);
+  toast(`"${aluno.nome}" excluído.`);
+  await carregarEditorAlunos();
 }
 
 $("#sel-turma-edit").addEventListener("change", carregarEditorAlunos);
 
-$("#btn-salvar-alunos").addEventListener("click", async () => {
+// adicionar aluno pelo campo + botão (ou Enter)
+async function adicionarAlunoUI() {
   const turmaId = Number($("#sel-turma-edit").value);
   if (!turmaId) return;
-  const nomes = $("#editor-alunos").value.split("\n");
-  await DB.substituirAlunosDaTurma(turmaId, nomes);
-  toast("Lista de alunos salva.");
+  const campo = $("#novo-aluno");
+  const nome = campo.value.trim();
+  if (!nome) { toast("Digite o nome do aluno.", true); return; }
+  const id = await DB.adicionarAluno(turmaId, nome);
+  if (id == null) {
+    toast("Já existe um aluno com esse nome na turma.", true);
+    return;
+  }
+  campo.value = "";
+  await carregarEditorAlunos();
+  campo.focus();   // pronto para digitar o próximo
+}
+
+$("#btn-add-aluno").addEventListener("click", adicionarAlunoUI);
+$("#novo-aluno").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); adicionarAlunoUI(); }
 });
 
 /* ---------- backup ---------- */

@@ -14,6 +14,7 @@
     --papel:    #faf8f2;   /* creme de papel */
     --papel-2:  #f2eee2;   /* faixa alternada */
     --linha:    #d9cfb8;   /* pauta do caderno */
+    --linha-forte: #a99a78; /* divisória mais escura (detalhe de faltas) */
     --margem:   #c98a8a;   /* margem vermelha do caderno */
     --texto:    #2a2a26;
     --apagado:  #8a8478;
@@ -154,18 +155,39 @@
   tr.detalhe > td { padding: 0; border-bottom: 1px solid var(--linha); }
   tr.detalhe .caixa-datas { background: var(--papel-2); padding: 6px 14px 10px; }
   tr.detalhe .datas-falta { margin: 0; }
+  tr.detalhe .datas-falta li:last-child { border-bottom: none; }
 
-  /* ---------- editor de alunos ---------- */
-  textarea {
-    width: 100%; min-height: 220px; font-family: inherit; font-size: 1rem;
-    line-height: 1.9; padding: 10px 12px 10px 16px;
-    border: 1px solid var(--linha); border-radius: 8px;
-    background:
-      linear-gradient(var(--papel) 0 0) padding-box,
-      repeating-linear-gradient(var(--papel), var(--papel) 33px, var(--linha) 33px, var(--linha) 34px);
-    resize: vertical;
+  /* ---------- editor de alunos (tabela) ---------- */
+  .tabela-alunos { border-top: 1px solid var(--linha); margin-bottom: 14px; }
+  .tabela-alunos .aluno-edit {
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--linha);
+    background: linear-gradient(to right, var(--margem) 0 2px, transparent 2px);
+    padding-left: 14px;
   }
-  textarea:focus { outline: 2px solid var(--tinta-2); }
+  .tabela-alunos .aluno-edit:nth-child(even) {
+    background-color: var(--papel-2);
+    background-image: linear-gradient(to right, var(--margem) 0 2px, transparent 2px);
+  }
+  /* o nome é um input que "parece texto" até receber foco */
+  .tabela-alunos .nome-edit {
+    flex: 1; font-family: inherit; font-size: 1rem; color: var(--texto);
+    background: transparent; border: 1px solid transparent; border-radius: 6px;
+    padding: 11px 8px; margin: 3px 0; min-width: 0;
+  }
+  .tabela-alunos .nome-edit:hover { border-color: var(--linha); }
+  .tabela-alunos .nome-edit:focus { outline: none; border-color: var(--tinta-2);
+    background: #fff; box-shadow: 0 0 0 2px rgba(47,85,134,.15); }
+  .tabela-alunos .btn-excluir-aluno {
+    flex: none; background: none; border: none; cursor: pointer;
+    color: var(--erro); font-family: inherit; font-size: 1.3rem; line-height: 1;
+    padding: 8px 14px; border-radius: 6px;
+  }
+  .tabela-alunos .btn-excluir-aluno:active { background: rgba(162,59,59,.12); }
+  .tabela-alunos .vazio-tabela { color: var(--apagado); font-style: italic; padding: 18px 4px; text-align: center; }
+
+  .linha-add { display: flex; gap: 10px; }
+  .linha-add input { flex: 1; }
 
   /* ---------- diversos ---------- */
   .vazio { color: var(--apagado); font-style: italic; padding: 24px 4px; text-align: center; }
@@ -183,7 +205,7 @@
   .rodape h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--apagado); margin: 0 0 10px; }
   details summary { cursor: pointer; color: var(--tinta); font-size: .9rem; }
   .datas-falta { margin: 8px 0 0; padding: 0; list-style: none; }
-  .datas-falta li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted var(--linha); font-size: .9rem; }
+  .datas-falta li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linha-forte); font-size: .9rem; }
   .datas-falta button { background: none; border: none; color: var(--erro); font-size: .85rem; cursor: pointer; font-family: inherit; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -218,10 +240,11 @@
     </label>
 
     <div id="bloco-editor" hidden>
-      <p class="sub">Um aluno por linha. Edite à vontade e salve.</p>
-      <textarea id="editor-alunos" placeholder="Digite um nome por linha…"></textarea>
-      <div class="barra-acoes">
-        <button class="acao" id="btn-salvar-alunos">Salvar lista</button>
+      <p class="sub">Toque no nome para editar. As mudanças salvam sozinhas.</p>
+      <div id="tabela-alunos" class="tabela-alunos"></div>
+      <div class="linha-add">
+        <input type="text" id="novo-aluno" placeholder="Nome do novo aluno…" />
+        <button class="acao" id="btn-add-aluno" style="flex:none">Adicionar</button>
       </div>
     </div>
 
