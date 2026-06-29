@@ -16,6 +16,13 @@ const DB_VERSION = 1;
 
 let _db = null;
 
+// Comparador de nomes que entende números embutidos:
+// "5º ano" vem antes de "10º ano" (e não o contrário, como na ordem alfabética).
+// numeric:true faz "10" ser tratado como número, não como "1" seguido de "0".
+const cmpNome = (a, b) =>
+  a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" });
+
+
 // Abre (e cria, na primeira vez) o banco. Memoiza a conexão.
 function abrir() {
   if (_db) return Promise.resolve(_db);
@@ -73,7 +80,7 @@ function promisificar(req) {
 async function listarTurmas() {
   return tx("turmas", "readonly", (t) =>
     promisificar(t.objectStore("turmas").getAll())
-  ).then((arr) => arr.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+  ).then((arr) => arr.sort((a, b) => cmpNome(a.nome, b.nome)));
 }
 
 async function criarTurma(nome) {
@@ -128,7 +135,7 @@ async function listarAlunos(turmaId) {
   const arr = await tx("alunos", "readonly", (t) =>
     promisificar(t.objectStore("alunos").index("turmaId").getAll(turmaId))
   );
-  return arr.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  return arr.sort((a, b) => cmpNome(a.nome, b.nome));
 }
 
 /*
@@ -256,7 +263,7 @@ async function faltasPorAluno(turmaId, ano, semestre) {
     resultado.push({ nome: aluno.nome, alunoId: aluno.id, totalFaltas: total });
   }
   resultado.sort(
-    (a, b) => b.totalFaltas - a.totalFaltas || a.nome.localeCompare(b.nome, "pt-BR")
+    (a, b) => b.totalFaltas - a.totalFaltas || cmpNome(a.nome, b.nome)
   );
   return resultado;
 }
