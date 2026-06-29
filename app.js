@@ -51,7 +51,85 @@ async function preencherSelectsTurma() {
       if ([...el.options].some((o) => o.value === anterior)) el.value = anterior;
     }
   }
+  await renderTabelaTurmas(turmas);
   return turmas;
+}
+
+// mini-tabela de turmas: nome editável + excluir
+async function renderTabelaTurmas(turmas) {
+  if (!turmas) turmas = await DB.listarTurmas();
+  const bloco = $("#bloco-turmas");
+  const tabela = $("#tabela-turmas");
+  if (turmas.length === 0) { bloco.hidden = true; tabela.innerHTML = ""; return; }
+  bloco.hidden = false;
+  tabela.innerHTML = "";
+
+  for (const turma of turmas) {
+    const row = document.createElement("div");
+    row.className = "aluno-edit";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "nome-edit";
+    input.value = turma.nome;
+    input.dataset.id = turma.id;
+    input.dataset.original = turma.nome;
+    input.addEventListener("blur", () => salvarRenomeTurma(input));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    });
+
+    const btn = document.createElement("button");
+    btn.className = "btn-excluir-aluno";
+    btn.textContent = "×";
+    btn.title = "Excluir turma";
+    btn.addEventListener("click", () => excluirTurmaUI(turma));
+
+    row.appendChild(input);
+    row.appendChild(btn);
+    tabela.appendChild(row);
+  }
+}
+
+// renomeia uma turma (preserva alunos e faltas, pois é pelo id)
+async function salvarRenomeTurma(input) {
+  const id = Number(input.dataset.id);
+  const novo = input.value.trim();
+  const original = input.dataset.original;
+  if (novo === original) return;
+  if (!novo) {
+    input.value = original;
+    toast("O nome da turma não pode ficar vazio.", true);
+    return;
+  }
+  const ok = await DB.renomearTurma(id, novo);
+  if (ok) {
+    input.dataset.original = novo;
+    toast("Turma renomeada.");
+    await preencherSelectsTurma();   // atualiza os seletores das outras abas
+    await carregarEditorAlunos();
+  } else {
+    input.value = original;
+    toast("Já existe uma turma com esse nome.", true);
+  }
+}
+
+// exclui turma exigindo digitar o nome (confirmação reforçada)
+async function excluirTurmaUI(turma) {
+  const alunos = await DB.listarAlunos(turma.id);
+  const aviso = alunos.length > 0
+    ? `Isto vai apagar a turma "${turma.nome}", seus ${alunos.length} aluno(s) e todas as faltas registrados.`
+    : `Isto vai apagar a turma "${turma.nome}".`;
+  const digitado = prompt(`${aviso}\n\nPara confirmar, digite o nome da turma:`);
+  if (digitado === null) return; // cancelou
+  if (digitado.trim() !== turma.nome) {
+    toast("Nome não confere. Exclusão cancelada.", true);
+    return;
+  }
+  await DB.excluirTurma(turma.id);
+  toast(`Turma "${turma.nome}" excluída.`);
+  await preencherSelectsTurma();
+  await carregarEditorAlunos();
 }
 
 /* ===================== TURMAS ===================== */

@@ -86,6 +86,42 @@ async function criarTurma(nome) {
   );
 }
 
+/* Renomeia uma turma pelo id. Rejeita vazio ou duplicado.
+ * Retorna true se renomeou. */
+async function renomearTurma(turmaId, novoNome) {
+  novoNome = novoNome.trim();
+  if (!novoNome) return false;
+  const existentes = await listarTurmas();
+  if (existentes.some((t) => t.id !== turmaId &&
+      t.nome.toLowerCase() === novoNome.toLowerCase())) {
+    return false; // já existe outra turma com esse nome
+  }
+  return tx("turmas", "readwrite", async (t) => {
+    const store = t.objectStore("turmas");
+    const turma = await promisificar(store.get(turmaId));
+    if (!turma) return false;
+    turma.nome = novoNome;
+    await promisificar(store.put(turma));
+    return true;
+  });
+}
+
+/* Exclui uma turma E, em cascata, todos os seus alunos e as faltas deles. */
+async function excluirTurma(turmaId) {
+  // 1) descobre os alunos da turma
+  const alunos = await listarAlunos(turmaId);
+  // 2) apaga as faltas de cada aluno
+  for (const aluno of alunos) {
+    await _removerFaltasDoAluno(aluno.id);
+  }
+  // 3) apaga os alunos e a turma
+  await tx(["alunos", "turmas"], "readwrite", (t) => {
+    const sa = t.objectStore("alunos");
+    for (const aluno of alunos) sa.delete(aluno.id);
+    t.objectStore("turmas").delete(turmaId);
+  });
+}
+
 /* ----------------------------- ALUNOS ----------------------------- */
 
 async function listarAlunos(turmaId) {
@@ -260,7 +296,7 @@ async function importarTudo(dados) {
 }
 
 window.DB = {
-  listarTurmas, criarTurma,
+  listarTurmas, criarTurma, renomearTurma, excluirTurma,
   listarAlunos, substituirAlunosDaTurma,
   adicionarAluno, renomearAluno, removerAluno,
   registrarFaltas, removerFalta, datasDeFalta,
