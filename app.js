@@ -51,71 +51,71 @@ async function preencherSelectsTurma() {
       if ([...el.options].some((o) => o.value === anterior)) el.value = anterior;
     }
   }
-  await renderTabelaTurmas(turmas);
+  // habilita/desabilita os botões de renomear/excluir conforme haja turma
+  const temTurma = turmas.length > 0;
+  const bEdit = $("#btn-renomear-turma"), bDel = $("#btn-excluir-turma");
+  if (bEdit) bEdit.disabled = !temTurma;
+  if (bDel) bDel.disabled = !temTurma;
+  if (!temTurma) ocultarRenomeTurma();
   return turmas;
 }
 
-// mini-tabela de turmas: nome editável + excluir
-async function renderTabelaTurmas(turmas) {
-  if (!turmas) turmas = await DB.listarTurmas();
-  const bloco = $("#bloco-turmas");
-  const tabela = $("#tabela-turmas");
-  if (turmas.length === 0) { bloco.hidden = true; tabela.innerHTML = ""; return; }
-  bloco.hidden = false;
-  tabela.innerHTML = "";
-
-  for (const turma of turmas) {
-    const row = document.createElement("div");
-    row.className = "aluno-edit";
-
-    const input = document.createElement("input");
-    input.type = "text";
-    input.className = "nome-edit";
-    input.value = turma.nome;
-    input.dataset.id = turma.id;
-    input.dataset.original = turma.nome;
-    input.addEventListener("blur", () => salvarRenomeTurma(input));
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-    });
-
-    const btn = document.createElement("button");
-    btn.className = "btn-excluir-aluno";
-    btn.textContent = "×";
-    btn.title = "Excluir turma";
-    btn.addEventListener("click", () => excluirTurmaUI(turma));
-
-    row.appendChild(input);
-    row.appendChild(btn);
-    tabela.appendChild(row);
-  }
+// devolve {id, nome} da turma atualmente selecionada no dropdown, ou null
+function turmaSelecionada() {
+  const sel = $("#sel-turma-edit");
+  const id = Number(sel.value);
+  if (!id) return null;
+  const nome = sel.options[sel.selectedIndex]?.textContent || "";
+  return { id, nome };
 }
 
-// renomeia uma turma (preserva alunos e faltas, pois é pelo id)
-async function salvarRenomeTurma(input) {
-  const id = Number(input.dataset.id);
-  const novo = input.value.trim();
-  const original = input.dataset.original;
-  if (novo === original) return;
-  if (!novo) {
-    input.value = original;
-    toast("O nome da turma não pode ficar vazio.", true);
-    return;
-  }
-  const ok = await DB.renomearTurma(id, novo);
+function ocultarRenomeTurma() {
+  $("#bloco-renomear").hidden = true;
+}
+
+// clicar no lápis: revela o campo de renomeação com o nome atual
+$("#btn-renomear-turma").addEventListener("click", () => {
+  const turma = turmaSelecionada();
+  if (!turma) return;
+  $("#nome-turma-edit").value = turma.nome;
+  $("#bloco-renomear").hidden = false;
+  $("#nome-turma-edit").focus();
+  $("#nome-turma-edit").select();
+});
+
+$("#btn-cancela-renome").addEventListener("click", ocultarRenomeTurma);
+
+// salvar o novo nome (preserva alunos e faltas, pois é pelo id)
+async function confirmarRenomeTurma() {
+  const turma = turmaSelecionada();
+  if (!turma) return;
+  const novo = $("#nome-turma-edit").value.trim();
+  if (!novo) { toast("O nome da turma não pode ficar vazio.", true); return; }
+  if (novo === turma.nome) { ocultarRenomeTurma(); return; }
+  const ok = await DB.renomearTurma(turma.id, novo);
   if (ok) {
-    input.dataset.original = novo;
-    toast("Turma renomeada.");
-    await preencherSelectsTurma();   // atualiza os seletores das outras abas
+    ocultarRenomeTurma();
+    await preencherSelectsTurma();
+    // mantém a mesma turma selecionada (agora com o nome novo)
+    const opt = [...$("#sel-turma-edit").options].find((o) => o.textContent === novo);
+    if (opt) $("#sel-turma-edit").value = opt.value;
     await carregarEditorAlunos();
+    toast("Turma renomeada.");
   } else {
-    input.value = original;
     toast("Já existe uma turma com esse nome.", true);
   }
 }
 
-// exclui turma exigindo digitar o nome (confirmação reforçada)
-async function excluirTurmaUI(turma) {
+$("#btn-confirma-renome").addEventListener("click", confirmarRenomeTurma);
+$("#nome-turma-edit").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); confirmarRenomeTurma(); }
+  if (e.key === "Escape") { e.preventDefault(); ocultarRenomeTurma(); }
+});
+
+// excluir a turma selecionada, exigindo digitar o nome (confirmação reforçada)
+$("#btn-excluir-turma").addEventListener("click", async () => {
+  const turma = turmaSelecionada();
+  if (!turma) return;
   const alunos = await DB.listarAlunos(turma.id);
   const aviso = alunos.length > 0
     ? `Isto vai apagar a turma "${turma.nome}", seus ${alunos.length} aluno(s) e todas as faltas registrados.`
@@ -127,10 +127,11 @@ async function excluirTurmaUI(turma) {
     return;
   }
   await DB.excluirTurma(turma.id);
-  toast(`Turma "${turma.nome}" excluída.`);
+  ocultarRenomeTurma();
   await preencherSelectsTurma();
   await carregarEditorAlunos();
-}
+  toast(`Turma "${turma.nome}" excluída.`);
+});
 
 /* ===================== TURMAS ===================== */
 
@@ -217,7 +218,10 @@ async function excluirAluno(aluno) {
   await carregarEditorAlunos();
 }
 
-$("#sel-turma-edit").addEventListener("change", carregarEditorAlunos);
+$("#sel-turma-edit").addEventListener("change", () => {
+  ocultarRenomeTurma();
+  carregarEditorAlunos();
+});
 
 // adicionar aluno pelo campo + botão (ou Enter)
 async function adicionarAlunoUI() {

@@ -192,6 +192,21 @@
   .linha-add { display: flex; gap: 10px; }
   .linha-add input { flex: 1; }
 
+  /* seletor de turma com botões de renomear/excluir ao lado */
+  .linha-turma-sel { display: flex; gap: 8px; align-items: stretch; }
+  .linha-turma-sel select { flex: 1; min-width: 0; }
+  .icone-turma {
+    flex: none; width: 46px; font-size: 1.1rem; line-height: 1;
+    background: #fff; color: var(--tinta);
+    border: 1px solid var(--linha); border-radius: 8px;
+    cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  .icone-turma:hover { border-color: var(--tinta-2); }
+  .icone-turma:active { background: var(--papel-2); }
+  .icone-turma:disabled { opacity: .4; cursor: default; }
+  .icone-turma.perigo { color: var(--erro); }
+  .icone-turma.perigo:hover { border-color: var(--erro); }
+
   /* ---------- diversos ---------- */
   .vazio { color: var(--apagado); font-style: italic; padding: 24px 4px; text-align: center; }
   .barra-acoes { display: flex; gap: 10px; margin-top: 16px; }
@@ -237,18 +252,26 @@
       </div>
     </label>
 
-    <div id="bloco-turmas" hidden>
-      <p class="sub" style="margin-left:0">Toque no nome para renomear. Excluir uma turma apaga seus alunos e faltas.</p>
-      <div id="tabela-turmas" class="tabela-alunos"></div>
-    </div>
-
     <label class="campo">
       <span>Editar alunos da turma</span>
-      <select id="sel-turma-edit"></select>
+      <div class="linha-turma-sel">
+        <select id="sel-turma-edit"></select>
+        <button class="icone-turma" id="btn-renomear-turma" title="Renomear turma" aria-label="Renomear turma">✎</button>
+        <button class="icone-turma perigo" id="btn-excluir-turma" title="Excluir turma" aria-label="Excluir turma">🗑</button>
+      </div>
     </label>
 
+    <!-- campo de renomeação, aparece ao clicar no lápis -->
+    <div id="bloco-renomear" class="campo" hidden style="margin-top:-4px">
+      <div class="linha-2">
+        <input type="text" id="nome-turma-edit" />
+        <button class="acao" id="btn-confirma-renome" style="flex:none">Salvar</button>
+        <button class="acao secundaria" id="btn-cancela-renome" style="flex:none">Cancelar</button>
+      </div>
+    </div>
+
     <div id="bloco-editor" hidden>
-      <p class="sub">Toque no nome para editar. As mudanças salvam sozinhas.</p>
+      <p class="sub" style="margin-top:4px">Toque no nome de um aluno para editar. As mudanças salvam sozinhas.</p>
       <div id="tabela-alunos" class="tabela-alunos"></div>
       <div class="linha-add">
         <input type="text" id="novo-aluno" placeholder="Nome do novo aluno…" />
